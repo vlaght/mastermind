@@ -6,8 +6,7 @@ from pydantic import Field
 
 
 class BuildCreate(BaseModel):
-    name: str = Field(None, description='Name of project')
-    reverse_proxy_to: str = Field(None, description='Application url')
+    name: Optional[str] = Field(None, description='Name of project')
     reverse_proxy_from: str = Field(
         None,
         description='Outer hostname to access application',
@@ -17,21 +16,27 @@ class BuildCreate(BaseModel):
         None,
         description='Command to launch application with %PORT% placeholder',
     )
+    build_command: Optional[str] = Field(
+        None,
+        description='Command to build application if needed',
+    )
 
 
 class Build(BaseModel):
     id: int
     name: str
-    reverse_proxy_to: str
+    reverse_proxy_to: str = Field(None, description='Application url')
     reverse_proxy_from: str
     repository: str
     up_command: str
-    port: int
+    build_command: Optional[str] = None
+    port: Optional[int] = None
     path: str
-    log: str
+    log: Optional[str] = None
     status: str
     created_dt: datetime.datetime
     updated_dt: datetime.datetime
+    build_time: Optional[float] = None
 
 
 class BuildReadPage(BaseModel):

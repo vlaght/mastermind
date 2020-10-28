@@ -1,5 +1,5 @@
-from models.items import Item
+from models.builds import Build
 
-from .base import Crud
+from .build import BuildsCrud
 
-foo_crud = Crud(Item)
+builds_crud = BuildsCrud(Build)
