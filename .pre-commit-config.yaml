@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: flake8
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: "master"
+    hooks:
+      - id: isort
+        args: ["--force-single-line-imports"]
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v1.5.4 # Use the sha / tag you want to point at
+    hooks:
+      - id: autopep8
