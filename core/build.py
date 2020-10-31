@@ -2,44 +2,21 @@ import asyncio
 import datetime
 import hashlib
 import logging
-import os
-import subprocess
 
-from fastapi import HTTPException
+# from fastapi import HTTPException
 from sqlalchemy import and_
 from sqlalchemy import or_
 
 from core.base import Crud as BaseCrud
+from core.utils import clone_repo
+from core.utils import silent_kill
 from models.database import database
 
 logger = logging.getLogger('builds_core')
 logger.setLevel(logging.INFO)
 
 
-def clone_repo(values):
-
-    git_clone_args = [
-        'git',
-        'clone',
-        values['repository'],
-        values['path'],
-    ]
-    res = subprocess.run(git_clone_args)
-    if res.returncode != 0:
-        msg = 'Failed to clone repository, check server logs.'
-        raise HTTPException(500, detail=msg)
-
-
 class BuildsCrud(BaseCrud):
-
-    def silent_kill(self, pid):
-        logger.info('Trying to kill process by pid: %d', pid)
-        if pid is None:
-            return
-        try:
-            os.kill(pid, 9)
-        except OSError:
-            logger.info('Process %d not found', pid)
 
     async def stop_existent(self, values):
         logger.info('Looking for existent build')
@@ -59,8 +36,7 @@ class BuildsCrud(BaseCrud):
                 len(all_previous_builds)
             )
             for build in all_previous_builds:
-                self.silent_kill(build['app_pid'])
-                self.silent_kill(build['reverse_proxy_pid'])
+                silent_kill(build['app_pid'])
 
     async def create(self, values):
         await asyncio.wait_for(self.stop_existent(values), None)
@@ -98,9 +74,17 @@ class BuildsCrud(BaseCrud):
             or_(
                 and_(
                     self.table.c.app_pid.isnot(None),
-                    self.table.c.reverse_proxy_pid.isnot(None),
                 ),
                 self.table.c.status == 'running',
+            )
+        )
+        return await database.fetch_all(query=statement)
+
+    async def get_working(self):
+        statement = self.table.select().where(
+            and_(
+                self.table.c.app_pid.isnot(None),
+                self.table.c.status == 'working',
             )
         )
         return await database.fetch_all(query=statement)

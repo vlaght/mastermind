@@ -18,7 +18,6 @@ build_statuses = [
     'failing',
     'stopped',
     'working',
-    'retired',
 ]
 
 
@@ -33,7 +32,6 @@ Build = Table(
     Column('up_command', String, nullable=True),
     Column('build_command', String, nullable=True),
     Column('port', Integer, nullable=True),
-    Column('reverse_proxy_pid', Integer, nullable=True),
     Column('app_pid', Integer, nullable=True),
     Column('path', String, nullable=True),
     Column('log', Text, nullable=True),

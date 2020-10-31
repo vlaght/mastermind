@@ -32,7 +32,6 @@ class Build(BaseModel):
     port: Optional[int] = None
     path: str
     app_pid: Optional[int] = None
-    reverse_proxy_pid: Optional[int] = None
     log: Optional[str] = None
     status: str
     created_dt: datetime.datetime
