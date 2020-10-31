@@ -6,7 +6,6 @@ from pydantic import Field
 
 
 class BuildCreate(BaseModel):
-    name: Optional[str] = Field(None, description='Name of project')
     reverse_proxy_from: str = Field(
         None,
         description='Outer hostname to access application',
@@ -32,6 +31,8 @@ class Build(BaseModel):
     build_command: Optional[str] = None
     port: Optional[int] = None
     path: str
+    app_pid: Optional[int] = None
+    reverse_proxy_pid: Optional[int] = None
     log: Optional[str] = None
     status: str
     created_dt: datetime.datetime

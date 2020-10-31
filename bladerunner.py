@@ -8,8 +8,11 @@ import time
 from core import builds_crud
 from models.database import database
 
-logger = logging.getLogger(__name__)
+# from multiprocessing import Process
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -50,19 +53,32 @@ async def start(task):
     os.chdir(task['path'])
     cmd = task['up_command']
     port = free_port()
-    cmd = cmd.replace('%PORT%', port)
-    run_args = task['up_command'].split(' ')
-    p = subprocess.Popen(
-        run_args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.PIPE,
+    cmd = cmd.replace('%PORT%', str(port))
+    logger.info('Starting with: %s', cmd)
+    app_args = cmd.split(' ')
+    app_process = subprocess.Popen(
+        app_args,
+        # stdout=subprocess.PIPE,
+        # stderr=subprocess.PIPE,
+        # stdin=subprocess.PIPE,
+        close_fds=True,
+    )
+    caddy_exec = subprocess.check_output(['which', 'caddy']).decode().strip()
+    reverse_proxy_cmd = '{} reverse-proxy --from {} --to localhost:{}'.format(
+        caddy_exec,
+        task['reverse_proxy_from'],
+        port
+    )
+    reverse_proxy_args = reverse_proxy_cmd.split(' ')
+    reverse_proxy_process = subprocess.Popen(
+        reverse_proxy_args,
         close_fds=True,
     )
     await builds_crud.update(
         task['id'],
         dict(
-            pid=p.pid,
+            app_pid=app_process.pid,
+            reverse_proxy_pid=reverse_proxy_process.pid,
             status='working',
             reverse_proxy_to='localhost:{}'.format(port),
             port=port,
@@ -71,10 +87,10 @@ async def start(task):
     os.chdir(ROOT_DIR)
 
 
-def is_alive(task):
-    assert task['pid'] is not None
+def is_alive(pid):
+    assert pid is not None
     try:
-        os.kill(task['pid'], 0)
+        os.kill(pid, 0)
     except OSError:
         return False
     return True
@@ -91,52 +107,40 @@ async def process_exception(task, stage, e):
             log='{}\n{} failed: {}'.format(
                 task['log'],
                 stage,
-                e.args[0],
+                e,
             )
         )
     )
 
 
-async def launch_webserver(task):
-    cmd = 'caddy reverse-proxy --from {} --to {}'.format(
-        task['reverse_proxy_from'],
-        task['reverse_proxy_to'],
-    )
-    args = cmd.split(' ')
-    p = subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.PIPE,
-        close_fds=True,
-    )
-    await builds_crud.update(
-        task['id'],
-        dict(
-            pid=p.pid,
-            status='working',
-        )
-    )
+async def deal_with_bastard(task):
+    # await database.connect()
+    try:
+        await build(task)
+    except Exception as e:
+        await process_exception(task, 'build', e)
+        return
+    logger.info('Build: passed')
+    try:
+        await start(task)
+    except Exception as e:
+        await process_exception(task, 'start', e)
+        return
+    logging.info('Start: successfully')
+    # await database.disconnect()
 
 
 async def main():
+    await database.connect()
     while True:
-        await database.connect()
         task = await builds_crud.find_one()
         if task:
+            logger.info('Build<id:%d>: processing begins', task['id'])
             try:
-                await build(task)
+                await deal_with_bastard(task)
             except Exception as e:
-                await process_exception(task, 'build', e)
-                break
-            logger.info('Build: passed')
-            try:
-                await start(task)
-            except Exception as e:
-                await process_exception(task, 'start', e)
-                break
-            logging.info('Start: successfully')
-        time.sleep(5)
-        await database.disconnect()
+                await process_exception(task, 'processing', e)
+        await asyncio.sleep(0.1)
+
 
 asyncio.run(main())
