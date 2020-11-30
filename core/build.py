@@ -7,6 +7,7 @@ import logging
 from sqlalchemy import and_
 from sqlalchemy import or_
 
+from cfg import BUILDS_DIR
 from core.base import Crud as BaseCrud
 from core.utils import clone_repo
 from core.utils import silent_kill
@@ -43,7 +44,7 @@ class BuildsCrud(BaseCrud):
         hasher = hashlib.sha256()
         hasher.update(str(values).encode())
         hasher.update(str(datetime.datetime.now()).encode())
-        path = 'builds/{}'.format(hasher.hexdigest())
+        path = f'{BUILDS_DIR}/{hasher.hexdigest()}'
         values['path'] = path
         if not values.get('name'):
             name = values['repository'].split('/')[-1]

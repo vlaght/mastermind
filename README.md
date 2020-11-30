@@ -16,8 +16,9 @@ pipeline to Mastermind. It will clone your repository, execute build and start c
 
 
 ## pre-requisites
- - python3
+ - python3.8
  - caddy webserver
+ - git
  - postgres
 
 ## API

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from core.utils import check_requirements
 from handlers import bind_handlers
 from models.database import database
 from models.database import get_engine
@@ -14,6 +15,7 @@ bind_handlers(app)
 
 @app.on_event("startup")
 async def startup():
+    check_requirements()
     await database.connect()
 
 

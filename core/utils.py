@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import subprocess
 
 from fastapi import HTTPException
@@ -7,9 +8,22 @@ from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 
-def clone_repo(values):
-    git_clone_args = [
+def check_requirements():
+    requirements = [
         'git',
+        'caddy',
+    ]
+    not_found = ', '.join(
+        [r for r in requirements if shutil.which(r) is None]
+    )
+    if not_found:
+        logger.error(f'Following requirements aren`t satisfied: {not_found}')
+
+
+def clone_repo(values):
+    git_exec = shutil.which('git')
+    git_clone_args = [
+        git_exec,
         'clone',
         values['repository'],
         values['path'],
